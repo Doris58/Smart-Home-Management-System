@@ -1,0 +1,101 @@
+package com.infobip.pmf.course.smart_home.user_management_service.service;
+
+import com.infobip.pmf.course.smart_home.user_management_service.feignclient.DeviceClient;
+import com.infobip.pmf.course.smart_home.user_management_service.model.DeviceDTO;
+import com.infobip.pmf.course.smart_home.user_management_service.model.User;
+import com.infobip.pmf.course.smart_home.user_management_service.model.UserDTO;
+import com.infobip.pmf.course.smart_home.user_management_service.repository.UserRepository;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.infobip.pmf.course.smart_home.user_management_service.events.UserDeletedEvent;
+import com.infobip.pmf.course.smart_home.user_management_service.exception.ResourceNotFoundException;
+
+//import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+// collect the results of a stream operation into a list or another collection
+import java.util.stream.Collectors;
+
+@Service
+public class UserService 
+{
+    @Autowired
+    private UserRepository userRepository;
+
+    //@Autowired
+    //private DeviceClient deviceClient;
+
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
+
+    // Create a new user
+    public User createUser(User user) 
+    {
+        // Generate the API key here
+        user.setApiKey(generateApiKey());  // setter - ok
+        return userRepository.save(user);
+    }
+
+    // Generate API key
+    private String generateApiKey() 
+    {
+        // Implement API key generation logic here
+        return UUID.randomUUID().toString();
+    }
+
+    // Get all users - without APikeys!
+    public List<UserDTO> getAllUsers() 
+    {
+        List<User> users = userRepository.findAll();
+        return users.stream()
+                .map(user -> new UserDTO(user))  // Convert User entity to UserDTO
+                .collect(Collectors.toList());
+    }
+
+    // Get a user by ID - without APikey!
+    public UserDTO getUserById(Long id) 
+    {
+        return userRepository.findById(id)
+                .map(user -> new UserDTO(user)) //UserDTO(user.getId(), user.getUsername(), user.getEmail()))
+                .orElse(null);
+    }
+
+    // Delete a user, publish the UserDeletedEvent
+    public void deleteUser(Long userId) 
+    {
+        // perform deletion
+        userRepository.deleteById(userId);
+
+        // publish the UserDeletedEvent event to RabbitMQ
+        UserDeletedEvent event = new UserDeletedEvent(userId);
+        rabbitTemplate.convertAndSend("userExchange", "user.deleted", event);
+
+        // track when the event is published
+        logger.info("Published UserDeletedEvent for userId: {}", userId);
+    }
+
+    // Validate an API key
+    public boolean validateApiKey(String apiKey) 
+    {
+        return userRepository.findByApiKey(apiKey).isPresent();
+    }
+
+    public Optional<User> findUserByUsername(String username) 
+    {
+        return userRepository.findByUsername(username);
+    }
+}
+
+
+
+

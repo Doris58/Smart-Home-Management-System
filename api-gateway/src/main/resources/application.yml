@@ -1,0 +1,14 @@
+# list each microservice's OpenAPI doc URLs
+springdoc:
+  swagger-ui:
+    urls:
+      - name: user-management-service
+        url: http://user-management-service:8080/v3/api-docs
+      - name: device-management-service
+        url: http://device-management-service:8080/v3/api-docs
+
+# each service runs internally on container port 8080
+
+#spring:
+  #main:
+    #allow-circular-references: true

@@ -1,0 +1,157 @@
+version: '3.8'
+
+services:
+  # container name
+  device-management-db:
+    image: mariadb:latest
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: device_management
+      MARIADB_USER: app_user
+      MARIADB_PASSWORD: ${MARIADB_APP_PASSWORD}
+    ports:
+      - "3306:3306"
+    # map the local SQL file to the container’s directory
+    # to automatically run SQL commands when the container is started
+    volumes:
+      - ./init_device_db.sql:/docker-entrypoint-initdb.d/init_device_db.sql
+    # ensure the mariadb container is ready before starting the other services
+    healthcheck:
+      interval: 10s
+      retries: 10
+      timeout: 30s
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+  
+  user-management-db:
+    image: mariadb:latest
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: user_management
+      MARIADB_USER: app_user
+      MARIADB_PASSWORD: ${MARIADB_APP_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./init_user_db.sql:/docker-entrypoint-initdb.d/init_user_db.sql
+    healthcheck:
+      interval: 10s
+      retries: 10
+      timeout: 30s
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+
+  rabbitmq:
+    image: rabbitmq:management # the official RabbitMQ image
+    ports:
+      - "5672:5672"    # Default port for RabbitMQ messaging
+      - "15672:15672"  # Port for RabbitMQ Management UI
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      retries: 10
+      timeout: 30s
+
+  # each service builds its image from the Dockerfile located in its directory
+  # ensure services wait for their dependencies to be healthy before starting
+
+  # the api-gateway will wait for the both microservices to be healthy before starting 
+  api-gateway:
+    build: 
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      device-management-service:
+        condition: service_healthy
+      user-management-service:
+        condition: service_healthy
+    healthcheck:
+      interval: 10s
+      retries: 10
+      timeout: 30s
+      test: "curl --fail --silent localhost:8080/actuator/health | grep UP || exit 1"
+  
+  device-management-service:
+    build: 
+      context: ./device-management-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"   # Host port 8081 -> Container port 8080
+    depends_on:
+      # ensure it waits for MariaDB to be not only ready, but healthy
+      device-management-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      user-management-service:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://device-management-db:3306/device_management
+      SPRING_DATASOURCE_USERNAME: app_user
+      SPRING_DATASOURCE_PASSWORD: ${MARIADB_APP_PASSWORD}
+    healthcheck:
+      interval: 10s
+      retries: 10
+      timeout: 30s
+      # test both connectivity and whether InnoDB has started
+      test: "curl --fail --silent localhost:8080/actuator/health | grep UP || exit 1"
+
+  user-management-service:
+    build: 
+      context: ./user-management-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8080"
+    depends_on:
+      user-management-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment: 
+      SPRING_DATASOURCE_URL: jdbc:mariadb://user-management-db:3306/user_management
+      SPRING_DATASOURCE_USERNAME: app_user
+      SPRING_DATASOURCE_PASSWORD: ${MARIADB_APP_PASSWORD}
+    healthcheck:
+      interval: 10s
+      retries: 10
+      timeout: 30s
+      test: "curl --fail --silent localhost:8080/actuator/health | grep UP || exit 1"
+
+  notification-service:
+    build: 
+      context: ./notification-service
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8080"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      user-management-service:
+        condition: service_healthy
+      device-management-service:
+        condition: service_healthy
+    healthcheck:
+      interval: 10s
+      retries: 10
+      timeout: 30s
+      test: "curl --fail --silent localhost:8080/actuator/health | grep UP || exit 1"
+
+  # prometheus can be started at any time
+  # it will attempt to scrape metrics based on the prometheus.yml
+  # if the target services are not yet running, 
+  # prometheus will retry scraping them at the next scrape_interval
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - 9090:9090
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - 3000:3000
+
+
