@@ -1,10 +1,15 @@
 package com.infobip.pmf.course.smart_home.device_management_service.events;
 
 import java.util.List;
+import java.io.Serializable;
 
-// carries information about the device change
-public class DeviceStatusChangedEvent 
+// Carries information about the device change
+// Mark the class for serialization, allowing it to be converted into a stream of bytes (or sent over the network)
+public class DeviceStatusChangedEvent implements Serializable
 {
+    // A unique identifier for the class used during serialization and deserialization; Optional but recommended
+    private static final long serialVersionUID = 1L;  
+    
     private Long deviceId;
     private String deviceName;
     private String newStatus;

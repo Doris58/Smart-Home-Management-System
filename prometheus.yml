@@ -1,4 +1,4 @@
-# the main configuration file for Prometheus
+# The main configuration file for Prometheus
 
 global:
   scrape_interval: 15s # How often Prometheus will scrape metrics

@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import reactor.core.publisher.Mono;
 
 // a Feign client to interact with the user management service
-@FeignClient(name = "user-management-service")
+@FeignClient(name = "user-management-service", url = "http://user-management-service:8080")
 public interface UserClient 
 {
     @GetMapping("/validate-api-key")

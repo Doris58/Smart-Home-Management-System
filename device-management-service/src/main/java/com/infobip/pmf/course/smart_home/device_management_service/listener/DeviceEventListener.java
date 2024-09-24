@@ -22,7 +22,7 @@ public class DeviceEventListener
     @Autowired
     private DeviceService deviceService;
 
-    @RabbitListener(queues = "user.deleted.queue")
+    @RabbitListener(queues = "device.user.deleted.queue")
     public void handleUserDeleted(UserDeletedEvent event) 
     {
         Long userId = event.getUserId();

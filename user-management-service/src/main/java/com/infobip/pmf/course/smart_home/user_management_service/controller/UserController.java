@@ -57,19 +57,19 @@ public class UserController
         return ResponseEntity.noContent().build();
     }
 
-    /* 
-    @GetMapping("/{userId}/with-devices")  // @GetMapping("/users/{userId}/with-devices")
-    public User getUserWithDevices(@PathVariable Long userId)
+    /* --> ambiguity!
+    // Get a user by username
+    @GetMapping("/{username}")
+    public ResponseEntity<UserDTO> getUserByUsername(@PathVariable String username) 
     {
-        return userService.getUserWithDevices(userId);
+        UserDTO userDTO = userService.getUserByUsername(username);
+        if(userDTO != null) 
+        {
+            return ResponseEntity.ok(userDTO);
+        }
+        return ResponseEntity.notFound().build();
     }
     */
-
-    @GetMapping("/{username}")
-    public User getUserByUsername(@PathVariable String username) 
-    {
-        return userService.findUserByUsername(username).orElse(null);
-    }
 
     // for api gateway, apy key gateway filter, path is defined in the UserClient feignclinet
     // an API endpoint that validates the API key
@@ -78,7 +78,42 @@ public class UserController
     {
         return userService.validateApiKey(apiKey);
     }
+
+    /*
+     * ResponseEntity allows to control the HTTP status code and headers explicitly. 
+     * For instance, you can return 200 OK for success or 404 NOT FOUND if the resource doesn't exist.
+     * Direct return (e.g., User) assumes a default 200 OK response without custom headers or status codes, limiting flexibility.
+     * By returning ResponseEntity, you gain more control over the response.
+    */
 }
+
+
+
+
+
+ /* 
+    @GetMapping("/{userId}/with-devices")  // @GetMapping("/users/{userId}/with-devices")
+    public User getUserWithDevices(@PathVariable Long userId)
+    {
+        return userService.getUserWithDevices(userId);
+    }
+    */
+
+    /* 
+    @GetMapping("/{username}")
+    public User getUserByUsername(@PathVariable String username) 
+    {
+        return userService.findUserByUsername(username).orElse(null);
+    }
+
+    @GetMapping("/{username}")
+    public ResponseEntity<UserDTO> getUserByUsername(@PathVariable String username) 
+    {
+        return userService.findUserByUsername(username)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+    }
+    */
 
     
 

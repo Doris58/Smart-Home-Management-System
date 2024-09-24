@@ -7,7 +7,9 @@ import java.util.ArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +28,7 @@ import com.infobip.pmf.course.smart_home.device_management_service.events.Device
 import com.infobip.pmf.course.smart_home.device_management_service.exception.ResourceNotFoundException;
 
 import java.util.stream.Collectors;
+import java.util.Objects;
 
 @Service
 public class DeviceService 
@@ -41,6 +44,12 @@ public class DeviceService
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
+
+    @Autowired
+    public void configureRabbitTemplate(RabbitTemplate rabbitTemplate, Jackson2JsonMessageConverter converter) 
+    {
+        rabbitTemplate.setMessageConverter(converter);
+    }
 
     private static final Logger logger = LoggerFactory.getLogger(DeviceService.class);
 
@@ -63,7 +72,6 @@ public class DeviceService
     {
         return activeDevices;
     }
-
 
     // Create a new device
     public Device createDevice(Device device) 
@@ -129,7 +137,18 @@ public class DeviceService
                 .collect(Collectors.toList());
 
         // the list of user emails associated with the device 
-        // these emails will be used for sending notifications        
+        // these emails will be used for sending notifications
+        List<String> userEmails = device.getUserAssociations()
+                .stream()
+                .map(association -> 
+                {
+                    ResponseEntity<UserDTO> response = userClient.getUserById(association.getUserId());
+                    UserDTO userDTO = response.getBody(); // extract UserDTO from ResponseEntity
+                    return userDTO != null ? userDTO.getEmail() : null; // handle null case
+                })
+                .filter(Objects::nonNull) // filter out null emails
+                .collect(Collectors.toList());
+        /*         
         List<String> userEmails = device.getUserAssociations()
             .stream()
             .map(association -> 
@@ -138,6 +157,7 @@ public class DeviceService
                 return userDTO.getEmail();
             })
             .collect(Collectors.toList());
+        */
 
         // event setters - ok, + default constructor; or use paramterized constructor
         DeviceStatusChangedEvent event = new DeviceStatusChangedEvent();
@@ -161,20 +181,30 @@ public class DeviceService
         Device device = deviceRepository.findById(deviceId)
         .orElseThrow(() -> new ResourceNotFoundException("Device not found with id " + deviceId));
 
+        /*
         // Check if the user exists by calling the UM service and fetch the user by userId
         UserDTO user = userClient.getUserById(userId);  // userClient is a Feign client
         if (user == null) 
         {
             throw new ResourceNotFoundException("User not found with id " + userId);
         }
+        */
 
+        // Check if the user exists by calling the UM service and fetch the user by userId
+        ResponseEntity<UserDTO> response = userClient.getUserById(userId);
+        if(!response.getStatusCode().is2xxSuccessful() || response.getBody() == null)
+        {
+            throw new ResourceNotFoundException("User not found with id " + userId);
+        }
+    
+        UserDTO user = response.getBody();  // Not needed
+        
         // Create the user-device association
         UserDeviceAssociation association = new UserDeviceAssociation(userId, deviceId);
 
-        // Save the association
-        device.getUserAssociations().add(association);  
-        // upotreba gettera - ok
-        deviceRepository.save(device);
+        // Save the association in the device entity
+        device.getUserAssociations().add(association);  // getters usage - ok; adds the association to the list
+        deviceRepository.save(device);  // persists both device and association
     }
 
     // Disassociate a user from a device - brise bas tu konkretnu vezu iz baze
@@ -184,6 +214,14 @@ public class DeviceService
         if (association != null) 
         {
             userDeviceAssociationRepository.delete(association);
+
+            Device device = deviceRepository.findById(deviceId)
+            .orElseThrow(() -> new ResourceNotFoundException("Device not found with id " + deviceId));
+
+            // The @OneToMany relationship is not bidirectional by default -->
+            // Manually remove the association from the device entity's list
+            device.getUserAssociations().remove(association);
+            deviceRepository.save(device);  // persists the change
         }
     }
 
@@ -211,6 +249,31 @@ public class DeviceService
         List<Long> associatedUserIds = userDeviceAssociationRepository.findAssociatedUserIdsByUserId(userId);
         List<String> emails = new ArrayList<>();
 
+        for (Long associatedUserId : associatedUserIds) 
+        {
+            logger.info("Checking user existence for userId: {}", associatedUserId);
+
+            // Fetch the user details from User Management Service
+            ResponseEntity<UserDTO> response = userClient.getUserById(associatedUserId);
+            if(response.getStatusCode().is2xxSuccessful() && response.getBody() != null) 
+            {
+                emails.add(response.getBody().getEmail());
+            }
+            else
+            {
+                logger.warn("User with userId {} not found in user-management-service.", associatedUserId);
+            }
+        }
+
+        return emails;
+    }
+
+    /* 
+    public List<String> getEmailsByUserId(Long userId) 
+    {
+        List<Long> associatedUserIds = userDeviceAssociationRepository.findAssociatedUserIdsByUserId(userId);
+        List<String> emails = new ArrayList<>();
+
         for(Long associatedUserId : associatedUserIds) 
         {
             // Call to User Management Service to fetch user details
@@ -220,6 +283,7 @@ public class DeviceService
 
         return emails;
     }
+    */
 
     // Get the devices associated with a user
     public List<Device> getDevicesByUserId(Long userId) 

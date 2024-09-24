@@ -130,6 +130,10 @@ services:
         condition: service_healthy
       device-management-service:
         condition: service_healthy
+    environment:
+      INFOBIP_BASE_URL: ${INFOBIP_BASE_URL}
+      INFOBIP_API_KEY: ${INFOBIP_API_KEY}
+      INFOBIP_FROM_EMAIL: ${INFOBIP_FROM_EMAIL}
     healthcheck:
       interval: 10s
       retries: 10

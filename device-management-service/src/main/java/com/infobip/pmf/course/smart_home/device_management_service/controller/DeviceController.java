@@ -51,7 +51,7 @@ public class DeviceController
     public ResponseEntity<Device> updateDevice(@PathVariable Long id, @RequestBody Device deviceDetails) 
     {
         return deviceService.updateDevice(id, deviceDetails)
-                .map(ResponseEntity::ok)  // dS.updateDevice needs to return Optinal<Device>, not Device
+                .map(ResponseEntity::ok)  // for this, dS.updateDevice needs to return Optinal<Device>, not Device
                 .orElse(ResponseEntity.notFound().build());
     }
 

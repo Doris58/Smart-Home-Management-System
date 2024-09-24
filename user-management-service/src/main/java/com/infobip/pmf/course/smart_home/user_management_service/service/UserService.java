@@ -9,6 +9,7 @@ import com.infobip.pmf.course.smart_home.user_management_service.repository.User
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.infobip.pmf.course.smart_home.user_management_service.events.UserDeletedEvent;
@@ -35,6 +36,12 @@ public class UserService
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
+
+    @Autowired
+    public void configureRabbitTemplate(RabbitTemplate rabbitTemplate, Jackson2JsonMessageConverter converter) 
+    {
+        rabbitTemplate.setMessageConverter(converter);
+    }
 
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
@@ -78,7 +85,8 @@ public class UserService
 
         // publish the UserDeletedEvent event to RabbitMQ
         UserDeletedEvent event = new UserDeletedEvent(userId);
-        rabbitTemplate.convertAndSend("userExchange", "user.deleted", event);
+        rabbitTemplate.convertAndSend("userExchange", "device.user.deleted", event);
+        rabbitTemplate.convertAndSend("userExchange", "notification.user.deleted", event);
 
         // track when the event is published
         logger.info("Published UserDeletedEvent for userId: {}", userId);
@@ -90,10 +98,22 @@ public class UserService
         return userRepository.findByApiKey(apiKey).isPresent();
     }
 
+    /* --> ambiguity! 
+    // Get a user by username - without API key!
+    public UserDTO getUserByUsername(String username) 
+    {
+        return userRepository.findByUsername(username)
+                .map(user -> new UserDTO(user)) //UserDTO(user.getId(), user.getUsername(), user.getEmail()))
+                .orElse(null);
+    }
+    */
+
+    /* 
     public Optional<User> findUserByUsername(String username) 
     {
         return userRepository.findByUsername(username);
     }
+    */
 }
 
 

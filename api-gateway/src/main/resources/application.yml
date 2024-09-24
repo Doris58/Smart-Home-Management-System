@@ -9,6 +9,7 @@ springdoc:
 
 # each service runs internally on container port 8080
 
+# allow circular references - generally discouraged
 #spring:
   #main:
     #allow-circular-references: true

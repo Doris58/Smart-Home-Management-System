@@ -3,13 +3,18 @@ package com.infobip.pmf.course.smart_home.notification_service.listener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
 import com.infobip.pmf.course.smart_home.notification_service.events.DeviceStatusChangedEvent;
 import com.infobip.pmf.course.smart_home.notification_service.events.UserDeletedEvent;
 import com.infobip.pmf.course.smart_home.notification_service.feignclient.DeviceClient;
 import com.infobip.pmf.course.smart_home.notification_service.service.NotificationService;
+
+import jakarta.annotation.PostConstruct;
 
 import java.util.List;
 
@@ -54,7 +59,11 @@ public class NotificationEventListener
     }
 
     // listens to the queue user.deleted.queue and processes the event when received
-    @RabbitListener(queues = "user.deleted.queue")
+    @Retryable(
+    value = { Exception.class }, 
+    maxAttempts = 5, 
+    backoff = @Backoff(delay = 2000, multiplier = 2))
+    @RabbitListener(queues = "notification.user.deleted.queue")
     public void handleUserDeleted(UserDeletedEvent event) 
     {
         Long userId = event.getUserId();  // the only event data
@@ -79,6 +88,7 @@ public class NotificationEventListener
         catch(Exception e) 
         {
             logger.error("Failed to send notifications for UserDeletedEvent for userId: {}", userId, e);
+            throw e;  // Retry on failure
         }
     }
 }
