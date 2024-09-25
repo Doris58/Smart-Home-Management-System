@@ -3,6 +3,7 @@ package com.infobip.pmf.course.smart_home.api_gateway;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 //import com.infobip.pmf.course.smart_home.api_gateway.events.ApiKeyValidationEvent;
@@ -36,7 +37,17 @@ public class ApiKeyValidationService
  
     public boolean validateApiKey(String apiKey) 
     {
-        boolean isValid = userClient.validateApiKey(apiKey);
-        return isValid;
+        // Call the Feign client and get the ResponseEntity<Boolean>
+        ResponseEntity<Boolean> response = userClient.validateApiKey(apiKey);
+    
+        // Check if the response status is 2xx (successful) and if the body is not null
+        if(response.getStatusCode().is2xxSuccessful() && response.getBody() != null) 
+        {
+            // Return the boolean value from the response body
+            return response.getBody();
+        }
+    
+        // If something goes wrong (e.g., non-2xx status or null body), return false
+        return false;
     }
 }

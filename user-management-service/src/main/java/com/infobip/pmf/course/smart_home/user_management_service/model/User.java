@@ -12,6 +12,7 @@ public class User
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String username;
+    @Column(name = "api_key") // correctly map the Java field apiKey to the api_key column in the db
     private String apiKey;
    
     private String email; 

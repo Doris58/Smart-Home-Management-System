@@ -74,9 +74,10 @@ public class UserController
     // for api gateway, apy key gateway filter, path is defined in the UserClient feignclinet
     // an API endpoint that validates the API key
     @GetMapping("/validate-api-key")
-    public boolean validateApiKey (@RequestParam("apiKey") String apiKey)
+    public ResponseEntity<Boolean> validateApiKey(@RequestParam("apiKey") String apiKey) 
     {
-        return userService.validateApiKey(apiKey);
+        boolean isValid = userService.validateApiKey(apiKey);
+        return ResponseEntity.ok(isValid);
     }
 
     /*
