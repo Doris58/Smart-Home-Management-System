@@ -8,11 +8,11 @@ This is my final project for the course **Development of Scalable Production ICT
 
 - [Swagger UI - user-management-service](http://localhost:8082/swagger-ui/)
 
-- [RabbitMQ Management UI](http://localhost:15672)    username | password  guest | guest
+- [RabbitMQ Management UI](http://localhost:15672)  &nbsp; &nbsp; &nbsp;   username | password  &nbsp; &nbsp;  guest | guest
 
 - [Prometheus](http://localhost:9090)
 
-- [Grafana](http://localhost:3000)    username | password   admin | admin  (default)
+- [Grafana](http://localhost:3000)   &nbsp; &nbsp; &nbsp;  username | password    &nbsp; &nbsp; admin | admin &nbsp; &nbsp; (default)
           
 ## Project Overview
 
