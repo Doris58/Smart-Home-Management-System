@@ -2,16 +2,18 @@
 
 This is my final project for the course **Development of Scalable Production ICT Systems**, conducted by the **Department of Mathematics**, Faculty of Science, University of Zagreb, in collaboration with **Infobip**.
 
-## Once the project is started
+## Once the project is started:
 
-Access the services:
+- [Swagger UI - device-management-service](http://localhost:8081/swagger-ui/)
 
-- Device Management Swagger UI: http://localhost:8081/swagger-ui/
-- User Management Swagger UI: http://localhost:8082/swagger-ui/
-- RabbitMQ Management UI: http://localhost:15672   username/password  guest/guest  (default)
-- Prometheus: http://localhost:9090
-- Grafana: http://localhost:3000    username/password admin/admin
-  
+- [Swagger UI - user-management-service](http://localhost:8082/swagger-ui/)
+
+- [RabbitMQ Management UI](http://localhost:15672)    username | password  guest | guest
+
+- [Prometheus](http://localhost:9090)
+
+- [Grafana](http://localhost:3000)    username | password   admin | admin  (default)
+          
 ## Project Overview
 
 This system is designed to manage smart home devices and users while facilitating seamless communication between microservices. The system comprises three core microservices, with authentication handled at the API Gateway using an API key filter. The system also includes robust monitoring and event-driven communication.
@@ -35,8 +37,8 @@ This system is designed to manage smart home devices and users while facilitatin
 ## Prerequisites
 
 Ensure you have the following installed on your machine:
-- **Docker**: [https://docs.docker.com/get-docker/](https://docs.docker.com/get-docker/)
-- **Docker Compose**: [https://docs.docker.com/compose/install/](https://docs.docker.com/compose/install/)
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
 
 ## Running the Project
 
@@ -54,7 +56,7 @@ This will start the following services:
 - Prometheus (localhost:9090)
 - Grafana (localhost:3000)
 
-The databases (for the User and Device Management services) will be initialized with pre-populated data from init_user_db.sql and init_device_db.sql.
+The databases (for the User and Device Management services) will be initialized with pre-populated data from [init_user_db.sql](init_user_db.sql) and [init_device_db.sql](init_device_db.sql). 
 
 Shut down the containers:
 
@@ -68,17 +70,17 @@ All requests (excluding user registration) require an X-API-KEY header for authe
 
 User Registration (No API Key Required):
 ```bash
-    curl -X POST http://localhost:8080/users/register \
+curl -X POST http://localhost:8080/users/register \
 -H "Content-Type: application/json" \
 -d '{"username": "newuser", "email": "doris.djivanovic@gmail.com"}'
 ```
-Important Note:
-**Email Limitation**: For user creation, you must use the email `doris.djivanovic@gmail.com` due to limitations of the Infobip trial account.
+
+**Email Limitation**: For user creation, you must use the email `doris.djivanovic@gmail.com` due to limitations of the **Infobip trial account**.
 
 Create a New Device:
 
 ```bash
-    curl -X POST http://localhost:8080/devices \
+curl -X POST http://localhost:8080/devices \
 -H "X-API-KEY: 123e4567-e89b-12d3-a456-426614174001" \
 -H "Content-Type: application/json" \
 -d '{"name": "Living Room Thermostat", "location": "Living Room", "status": "active"}'
@@ -87,7 +89,7 @@ Create a New Device:
 Get All Devices:
 
 ```bash
-    curl -X GET http://localhost:8080/devices \
+curl -X GET http://localhost:8080/devices \
 -H "X-API-KEY: 123e4567-e89b-12d3-a456-426614174001"
 ```
 
@@ -107,8 +109,8 @@ curl -X DELETE http://localhost:8080/users/1 \
 
 ## TO DO
 
-Integration with custom domains for Infobip email service.
-Adding unit and integration tests.
+- Integration with custom domains for Infobip email service.
+- Adding unit and integration tests.
    
   
 
