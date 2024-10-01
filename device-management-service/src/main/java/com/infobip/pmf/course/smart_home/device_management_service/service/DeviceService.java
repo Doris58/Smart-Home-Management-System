@@ -131,42 +131,12 @@ public class DeviceService
     // Publish the DeviceStatusChangeEvent event to RabbitMQ
     private void publishDeviceStatusChangedEvent(Device device, String oldStatus) 
     {
-        List<Long> userIds = device.getUserAssociations()
-                .stream()
-                .map(UserDeviceAssociation::getUserId)
-                .collect(Collectors.toList());
-
-        // the list of user emails associated with the device 
-        // these emails will be used for sending notifications
-        List<String> userEmails = device.getUserAssociations()
-                .stream()
-                .map(association -> 
-                {
-                    ResponseEntity<UserDTO> response = userClient.getUserById(association.getUserId());
-                    UserDTO userDTO = response.getBody(); // extract UserDTO from ResponseEntity
-                    return userDTO != null ? userDTO.getEmail() : null; // handle null case
-                })
-                .filter(Objects::nonNull) // filter out null emails
-                .collect(Collectors.toList());
-        /*         
-        List<String> userEmails = device.getUserAssociations()
-            .stream()
-            .map(association -> 
-            {
-                UserDTO userDTO = userClient.getUserById(association.getUserId());
-                return userDTO.getEmail();
-            })
-            .collect(Collectors.toList());
-        */
-
         // event setters - ok, + default constructor; or use paramterized constructor
         DeviceStatusChangedEvent event = new DeviceStatusChangedEvent();
         event.setDeviceId(device.getId());
         event.setDeviceName(device.getName());
         event.setNewStatus(device.getStatus());
         event.setOldStatus(oldStatus);
-        event.setUserIds(userIds);  
-        event.setUserEmails(userEmails);
 
         rabbitTemplate.convertAndSend("deviceExchange", "device.status.changed", event);
 
@@ -243,6 +213,24 @@ public class DeviceService
         }
     }
 
+    // Moved from the publishDeviceStatusChangedEvent method
+    public List<String> getAssociatedUserEmailsByDeviceId(Long deviceId) 
+    {
+        // Fetch the user-device associations for the given device ID
+        List<UserDeviceAssociation> associations = userDeviceAssociationRepository.findByDeviceId(deviceId);
+
+        // Extract the user emails from the associations
+        return associations.stream()
+                .map(association -> 
+                {
+                    ResponseEntity<UserDTO> response = userClient.getUserById(association.getUserId());
+                    UserDTO userDTO = response.getBody();
+                    return userDTO != null ? userDTO.getEmail() : null;
+                })
+                .filter(Objects::nonNull) // Filter out null emails
+                .collect(Collectors.toList());
+    }
+ 
     // Get the emails of users associated with the devices controlled by a user
     public List<String> getEmailsByUserId(Long userId) 
     {

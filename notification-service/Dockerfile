@@ -9,8 +9,7 @@ RUN mvn dependency:go-offline
 # Copy the source code:
 COPY src ./src 
 # build the application:
-RUN mvn clean package 
-#-DskipTests
+RUN mvn clean package -DskipTests
 
 # Stage 2: Create the RUNTIME JRE image
 # create efficient and lightweight image

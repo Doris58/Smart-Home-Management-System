@@ -7,8 +7,16 @@ public class DeviceDTO
     private String status;
     private String location;
 
-    // Getters and Setters
+    public DeviceDTO(Long id, String name, String status, String location) 
+    {
+        this.id = id;
+        this.name = name;
+        this.status = status;
+        this.location = location;
+    }
 
+    // Getters and Setters
+    
     public Long getId() { return id; }
 
     public String getName() { return name; }

@@ -80,6 +80,13 @@ public class UserController
         return ResponseEntity.ok(isValid);
     }
 
+    @GetMapping("/check-existence")
+    public ResponseEntity<Boolean> checkUserExistsByEmail(@RequestParam("email") String email) 
+    {
+        boolean exists = userService.checkUserExistsByEmail(email);
+        return ResponseEntity.ok(exists);  // Return 200 OK with the boolean value
+    }
+
     /*
      * ResponseEntity allows to control the HTTP status code and headers explicitly. 
      * For instance, you can return 200 OK for success or 404 NOT FOUND if the resource doesn't exist.

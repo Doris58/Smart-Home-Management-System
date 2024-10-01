@@ -17,6 +17,7 @@ import com.infobip.pmf.course.smart_home.user_management_service.exception.Resou
 
 //import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -31,8 +32,8 @@ public class UserService
     @Autowired
     private UserRepository userRepository;
 
-    //@Autowired
-    //private DeviceClient deviceClient;
+    @Autowired
+    private DeviceClient deviceClient;
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
@@ -78,13 +79,17 @@ public class UserService
     }
 
     // Delete a user, publish the UserDeletedEvent
+    @Transactional // Ensures that the deletion and event publication occur in a single transaction
     public void deleteUser(Long userId) 
     {
-        // perform deletion
+        // fetch associated emails before deletion !
+        List<String> associatedEmails = deviceClient.getAssociatedUserEmails(userId);
+
+        // perform user deletion
         userRepository.deleteById(userId);
 
-        // publish the UserDeletedEvent event to RabbitMQ
-        UserDeletedEvent event = new UserDeletedEvent(userId);
+        // publish the UserDeletedEvent event to RabbitMQ, pass associated emails as part of the event
+        UserDeletedEvent event = new UserDeletedEvent(userId, associatedEmails);
         rabbitTemplate.convertAndSend("userExchange", "device.user.deleted", event);
         rabbitTemplate.convertAndSend("userExchange", "notification.user.deleted", event);
 
@@ -96,6 +101,11 @@ public class UserService
     public boolean validateApiKey(String apiKey) 
     {
         return userRepository.findByApiKey(apiKey).isPresent();
+    }
+
+    public boolean checkUserExistsByEmail(String email)
+    {
+        return userRepository.existsByEmail(email);
     }
 
     /* --> ambiguity! 

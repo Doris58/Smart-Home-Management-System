@@ -14,4 +14,8 @@ public interface DeviceClient
     // fetch the devices (relevant data) associated with a user
     @GetMapping("/devices/user/{userId}")
     List<DeviceDTO> getDevicesByUserId(@PathVariable("userId") Long userId);
+
+    // fetch the emails of users associated with devices controlled by the deleted user, before deletion!
+    @GetMapping("/devices/users/{userId}/associated-emails")
+    List<String> getAssociatedUserEmails(@PathVariable Long userId);
 }

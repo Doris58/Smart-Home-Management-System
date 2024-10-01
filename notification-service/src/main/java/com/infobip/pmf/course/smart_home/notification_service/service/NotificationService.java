@@ -29,12 +29,8 @@ public class NotificationService
         }
     }
 
-    public void sendEmailNotificationToUsers(List<String> userEmails, String subject, String message) 
+    public void sendEmailNotificationToUser(String email, String subject, String message) 
     {
-        for(String userEmail : userEmails) 
-        {
-            // Send email notification to a user
-            infobipEmailSender.sendEmail(userEmail, subject, message);  
-        }
+       infobipEmailSender.sendEmail(email, subject, message);  
     }
 }

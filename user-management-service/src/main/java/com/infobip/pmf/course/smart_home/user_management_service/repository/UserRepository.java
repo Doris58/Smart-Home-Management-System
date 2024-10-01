@@ -12,4 +12,7 @@ public interface UserRepository extends JpaRepository<User, Long>
     Optional<User> findByUsername(String username);
 
     Optional<User> findByApiKey(String apiKey);
+
+    // returns a simple boolean without fetching the entire user entity as the findByEmail method
+    boolean existsByEmail(String email);
 }

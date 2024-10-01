@@ -1,4 +1,4 @@
-package com.infobip.pmf.course.smart_home.device_management_service.model;
+package com.infobip.pmf.course.smart_home.notification_service;
 
 public class DeviceDTO 
 {

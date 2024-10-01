@@ -47,7 +47,7 @@ public class ApiKeyValidationService
             return response.getBody();
         }
     
-        // If something goes wrong (e.g., non-2xx status or null body), return false
+        // If something goes wrong (non-2xx status or null body), return false
         return false;
     }
 }

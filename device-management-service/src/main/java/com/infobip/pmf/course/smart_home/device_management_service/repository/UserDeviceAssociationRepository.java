@@ -21,4 +21,6 @@ public interface UserDeviceAssociationRepository extends JpaRepository<UserDevic
     // fetch userIds associated with a same device as a user with userId
     @Query("SELECT DISTINCT uda.userId FROM UserDeviceAssociation uda WHERE uda.deviceId IN (SELECT ud.deviceId FROM UserDeviceAssociation ud WHERE ud.userId = :userId)")
     List<Long> findAssociatedUserIdsByUserId(@Param("userId") Long userId);
+
+    List<UserDeviceAssociation> findByDeviceId(Long deviceId);
 }

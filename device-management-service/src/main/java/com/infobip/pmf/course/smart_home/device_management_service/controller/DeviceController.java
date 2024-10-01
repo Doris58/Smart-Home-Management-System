@@ -39,11 +39,26 @@ public class DeviceController
 
     // Get a device by ID
     @GetMapping("/{id}")
-    public ResponseEntity<Device> getDeviceById(@PathVariable Long id) 
+    public ResponseEntity<DeviceDTO> getDeviceById(@PathVariable Long id) 
     {
-        return deviceService.getDeviceById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        Optional<Device> optionalDevice = deviceService.getDeviceById(id);
+    
+        if (optionalDevice.isEmpty()) 
+        {
+            return ResponseEntity.notFound().build();
+        }
+    
+        Device device = optionalDevice.get();
+
+        DeviceDTO deviceDTO = new DeviceDTO
+        (
+            device.getId(),
+            device.getName(),
+            device.getStatus(),
+            device.getLocation()
+        );
+    
+        return ResponseEntity.ok(deviceDTO);
     }
 
     // Update device details
@@ -86,12 +101,21 @@ public class DeviceController
         }
     }
 
+    // new API endpoint to get associated user emails by deviceId
+    @GetMapping("/{deviceId}/associated-emails")
+    public ResponseEntity<List<String>> getAssociatedUserEmailsByDeviceId(@PathVariable Long deviceId) 
+    {
+        List<String> userEmails = deviceService.getAssociatedUserEmailsByDeviceId(deviceId);
+        return ResponseEntity.ok(userEmails);
+    }
+
     // Get the emails of users associated with the devices controlled by a user, for ex. DeviceClient in notification service needs it
     @GetMapping("/users/{userId}/associated-emails")
     public List<String> getAssociatedUserEmails(@PathVariable Long userId) 
     {
         return deviceService.getEmailsByUserId(userId);
     }
+
 
     // Get the devices associated with a user, for ex. DeviceClient in the user management service needs it
     @GetMapping("/user/{userId}")

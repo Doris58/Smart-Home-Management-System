@@ -5,13 +5,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
+import com.infobip.pmf.course.smart_home.notification_service.DeviceDTO;
 import com.infobip.pmf.course.smart_home.notification_service.events.DeviceStatusChangedEvent;
 import com.infobip.pmf.course.smart_home.notification_service.events.UserDeletedEvent;
 import com.infobip.pmf.course.smart_home.notification_service.feignclient.DeviceClient;
+import com.infobip.pmf.course.smart_home.notification_service.feignclient.UserClient;
 import com.infobip.pmf.course.smart_home.notification_service.service.NotificationService;
 
 import jakarta.annotation.PostConstruct;
@@ -31,12 +34,16 @@ public class NotificationEventListener
     @Autowired
     private DeviceClient deviceClient;
 
+    @Autowired
+    private UserClient userClient;
+
     // listener for DeviceStatusChangedEvent that triggers the notification for each asssociated user
     @RabbitListener(queues = "device.status.changed.queue")
     public void handleDeviceStatusChanged(DeviceStatusChangedEvent event) 
     {
-        logger.info("Received DeviceStatusChangedEvent for deviceId: {}", event.getDeviceId());
-        
+        Long deviceId = event.getDeviceId();
+        logger.info("Received DeviceStatusChangedEvent for deviceId: {}", deviceId);
+
         // handle event - send notification to all associated users
         String message = "Device " + event.getDeviceName() + " status " + event.getOldStatus() + "changed to " + event.getNewStatus();
         String title = "Device Status Update"; // I CAN SEND ALSO THE PREVIOUS STATUS HERE!
@@ -47,26 +54,59 @@ public class NotificationEventListener
 
         try
         {
-            // send email notification to all associated users
-            notificationService.sendEmailNotificationToUsers(event.getUserEmails(), title, message);
+            // Check if the device still exists before proceeding
+            ResponseEntity<DeviceDTO> deviceResponse = deviceClient.getDeviceById(deviceId);
+    
+            if(deviceResponse.getStatusCode().is2xxSuccessful() && deviceResponse.getBody() != null) 
+            {
+                logger.info("Device with deviceId: {} exists, proceeding with notification.", deviceId);
 
-            logger.info("Notifications sent successfully for DeviceStatusChangedEvent for deviceId: {}", event.getDeviceId());
-        }
-        catch(Exception e)
+                // Fetch associated emails directly in the notification service by the deviceId !!
+                ResponseEntity<List<String>> associatedEmailsResponse = deviceClient.getAssociatedUserEmailsByDeviceId(event.getDeviceId());
+
+                if(associatedEmailsResponse.getBody() != null) 
+                {
+                    List<String> associatedEmails = associatedEmailsResponse.getBody();
+            
+                    // Iterate through each email and check if the user still exists before sending notification
+                    for(String email : associatedEmails) 
+                    {
+                        // Perform a final check to ensure the user still exists 
+                        ResponseEntity<Boolean> userExistsResponse = userClient.checkUserExistsByEmail(email);
+
+                        if(userExistsResponse.getBody() != null && userExistsResponse.getBody()) 
+                        {
+                            // Send the notification if the user exists
+                            notificationService.sendEmailNotificationToUser(email, title, message);
+                            logger.info("Notification sent successfully to {}", email);
+                        } 
+                        else 
+                        {
+                            logger.warn("Skipping notification for {}, user no longer exists.", email);
+                        }
+                    }
+                }
+                logger.info("All notifications processed for DeviceStatusChangedEvent for deviceId: {}", deviceId);
+            }
+            else 
+            {
+                // Log if the device no longer exists
+                logger.warn("Device with deviceId: {} no longer exists, skipping notification.", deviceId);
+            }
+        }    
+        catch(Exception e) 
         {
-            logger.error("Failed to send notifications for DeviceStatusChangedEvent for deviceId: {}", event.getDeviceId(), e);
-        } 
+            logger.error("Failed to send notifications for DeviceStatusChangedEvent for deviceId: {}", deviceId, e);
+        }
     }
 
     // listens to the queue user.deleted.queue and processes the event when received
-    @Retryable(
-    value = { Exception.class }, 
-    maxAttempts = 5, 
-    backoff = @Backoff(delay = 2000, multiplier = 2))
-    @RabbitListener(queues = "notification.user.deleted.queue")
+    /* @Retryable(value = { Exception.class }, maxAttempts = 5, backoff = @Backoff(delay = 2000, multiplier = 2)) */
+    @RabbitListener(queues = "notification.user.deleted.queue") 
     public void handleUserDeleted(UserDeletedEvent event) 
     {
-        Long userId = event.getUserId();  // the only event data
+        Long userId = event.getUserId();  
+        List<String> associatedEmails = event.getAssociatedEmails();  
 
         //System.out.println("Received UserDeletedEvent for userId: " + userId);
         logger.info("Received UserDeletedEvent for userId: {}", userId);
@@ -77,18 +117,29 @@ public class NotificationEventListener
 
         try 
         {
-            // fetch associated user emails
-            List<String> associatedEmails = deviceClient.getAssociatedUserEmails(userId);
+            // Iterate through the associated emails
+            for(String email : associatedEmails) 
+            {
+                // Perform a final check to ensure the user still exists 
+                ResponseEntity<Boolean> response = userClient.checkUserExistsByEmail(email);
 
-            // send email notification to all users associated with the devices controlled by the deleted user
-            notificationService.sendEmailNotificationToUsers(associatedEmails, title, message);
-            
-            logger.info("Notifications sent successfully for UserDeletedEvent for userId: {}", userId);
+                if(response.getBody() != null && response.getBody()) 
+                {
+                    // Send notification if the user still exists
+                    notificationService.sendEmailNotificationToUser(email, title, message);
+                    logger.info("Notification sent successfully to {}", email);
+                } 
+                else 
+                {
+                    logger.warn("Skipping notification for {}, user no longer exists.", email);
+                }
+            }
+
+            logger.info("All notifications processed for UserDeletedEvent for userId: {}", userId);
         } 
         catch(Exception e) 
         {
             logger.error("Failed to send notifications for UserDeletedEvent for userId: {}", userId, e);
-            throw e;  // Retry on failure
         }
     }
 }

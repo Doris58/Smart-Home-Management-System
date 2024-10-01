@@ -11,8 +11,8 @@ public class DeviceStatusChangedEvent implements Serializable
     private Long deviceId;
     private String deviceName;
     private String newStatus;
-    private List<Long> userIds;
-    private List<String> userEmails;
+    //private List<Long> userIds;
+    //private List<String> userEmails;
 
     // I CAN SAVE HERE THE PREVIOUS STATUS ALSO !!! TO INFORM ABOUT THE CHANGE
     private String oldStatus;
@@ -21,14 +21,12 @@ public class DeviceStatusChangedEvent implements Serializable
     public DeviceStatusChangedEvent() {}
 
     // Parameterized constructor
-    public DeviceStatusChangedEvent(Long deviceId, String deviceName, String newStatus, String oldStatus, List<Long> userIds, List<String> userEmails) 
+    public DeviceStatusChangedEvent(Long deviceId, String deviceName, String newStatus, String oldStatus) 
     {
         this.deviceId = deviceId;
         this.deviceName = deviceName;
         this.newStatus = newStatus;
         this.oldStatus = oldStatus;
-        this.userIds = userIds;
-        this.userEmails = userEmails;
     }
 
     // Getters and setters
@@ -70,25 +68,5 @@ public class DeviceStatusChangedEvent implements Serializable
     public void setOldStatus(String oldStatus) 
     {
         this.oldStatus = oldStatus;
-    }
-
-    public List<Long> getUserIds() 
-    {
-        return userIds;
-    }
-
-    public void setUserIds(List<Long> userIds) 
-    {
-        this.userIds = userIds;
-    }
-
-    public List<String> getUserEmails() 
-    {
-        return userEmails;
-    }
-
-    public void setUserEmails(List<String> userEmails) 
-    {
-        this.userEmails = userEmails;
     }
 }
