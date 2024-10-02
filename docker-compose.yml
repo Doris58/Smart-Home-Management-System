@@ -148,6 +148,9 @@ services:
     image: prom/prometheus:latest
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      # ensure Prometheus retains any state related to stored metrics across restarts, 
+      # so the configuration is preserved
+      - ./prometheus_data:/prometheus # Persistent data volume
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
     ports:
@@ -157,5 +160,19 @@ services:
     image: grafana/grafana
     ports:
       - 3000:3000
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana_data:/var/lib/grafana # persist data across restarts
+
+  rabbitmq-exporter:
+    image: kbudde/rabbitmq-exporter
+    environment:
+      RABBIT_URL: http://rabbitmq:15672  # URL to your RabbitMQ Management UI
+      RABBIT_USER: guest
+      RABBIT_PASSWORD: guest
+    depends_on:
+      - rabbitmq
+    ports:
+      - 9419:9419 # 15692:15692  # Port exposed for RabbitMQ metrics
 
 

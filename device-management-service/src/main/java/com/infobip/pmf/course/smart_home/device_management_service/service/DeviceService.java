@@ -20,9 +20,9 @@ import com.infobip.pmf.course.smart_home.device_management_service.model.UserDev
 import com.infobip.pmf.course.smart_home.device_management_service.repository.DeviceRepository;
 import com.infobip.pmf.course.smart_home.device_management_service.repository.UserDeviceAssociationRepository;
 
-import feign.FeignException;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 
 import com.infobip.pmf.course.smart_home.device_management_service.events.DeviceStatusChangedEvent;
 import com.infobip.pmf.course.smart_home.device_management_service.exception.ResourceNotFoundException;
@@ -73,10 +73,24 @@ public class DeviceService
         return activeDevices;
     }
 
+    @PostConstruct // Spring will run this after the service is instantiated and dependencies are injected
+    public void initializeActiveDevices() 
+    {
+        // Query the repository to count active devices at the start
+        activeDevices = (int)deviceRepository.countByStatus("active");
+    }
+
     // Create a new device
     public Device createDevice(Device device) 
     {
-        return deviceRepository.save(device);
+        Device newDevice = deviceRepository.save(device);
+
+        if ("active".equals(newDevice.getStatus())) 
+        {
+            activeDevices++;
+        }
+
+        return newDevice;
     }
 
     // Get all devices
@@ -198,6 +212,12 @@ public class DeviceService
     // Delete a device 
     public void deleteDevice(Long id) 
     {
+        Optional<Device> device = deviceRepository.findById(id);
+        if(device.isPresent() && "active".equals(device.get().getStatus())) 
+        {
+            activeDevices--;
+        }
+   
         deviceRepository.deleteById(id);
     }
 

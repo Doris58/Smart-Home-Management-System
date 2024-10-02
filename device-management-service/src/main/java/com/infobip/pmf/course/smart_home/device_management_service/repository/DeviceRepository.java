@@ -8,6 +8,7 @@ import com.infobip.pmf.course.smart_home.device_management_service.model.Device;
 @Repository  // the annotation is not necessary
 public interface DeviceRepository extends JpaRepository<Device, Long> 
 {
-    
+    // JPA will automatically generate this
+    long countByStatus(String status);
 }
 

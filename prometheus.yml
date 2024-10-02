@@ -4,11 +4,32 @@ global:
   scrape_interval: 15s # How often Prometheus will scrape metrics
 
 scrape_configs:
-  - job_name: 'smart-home-services'
-    static_configs:
-      - targets: ['device-management-service:8081', 'user-management-service:8082']
-
-  - job_name: 'device-service'
+  # Scrape api-gateway
+  - job_name: 'api-gateway'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['device-management-service:8081']
+      - targets: ['api-gateway:8080']
+
+  # Scrape device-management-service
+  - job_name: 'device-management-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['device-management-service:8080']
+
+  # Scrape user-management-service
+  - job_name: 'user-management-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['user-management-service:8080']
+
+  # Scrape notification-service
+  - job_name: 'notification-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['notification-service:8080']
+
+  # Scrape RabbitMQ metrics from the exporter
+  - job_name: 'rabbitmq'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['rabbitmq-exporter:9419']  # 15692   

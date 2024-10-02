@@ -23,4 +23,4 @@ public interface UserDeviceAssociationRepository extends JpaRepository<UserDevic
     List<Long> findAssociatedUserIdsByUserId(@Param("userId") Long userId);
 
     List<UserDeviceAssociation> findByDeviceId(Long deviceId);
-}
+} 
