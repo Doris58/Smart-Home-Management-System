@@ -139,8 +139,9 @@ curl -X DELETE http://localhost:8080/users/1 \
 
 ## TO DO
 
-- Integration with custom domains for Infobip email service.
-- Adding unit and integration tests.
+- Ensuring databases persistence across container restarts by configuring Docker volumes
+- Integration with custom domains for Infobip email service
+- Adding unit and integration tests
    
   
 
