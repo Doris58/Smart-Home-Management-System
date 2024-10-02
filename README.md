@@ -58,11 +58,41 @@ This will start the following services:
 
 The databases (for the User and Device Management services) will be initialized with pre-populated data from [init_user_db.sql](init_user_db.sql) and [init_device_db.sql](init_device_db.sql). 
 
+View all running containers with their names and IDs:
+
+```bash
+    docker ps -a
+```
+
 Shut down the containers:
 
 ```bash
     docker-compose down
 ```
+
+Health Checks
+
+To monitor the health of the services, you can view the health status by accessing the corresponding `/actuator/health` endpoints. 
+
+To monitor the health of the containers check the container logs: 
+
+```bash
+    docker logs <container_id>
+```
+
+## Event Flow and Logging
+
+In the system, events play a critical role in coordinating communication between services. For instance, when a user is deleted, the **UserDeletedEvent** is published to both the **Device Management Service** and the **Notification Service**. The **Device Management Service** disassociates all devices linked to that user, while the **Notification Service** sends email notifications to other users associated with those devices. Additionally, when a device's status changes (via the device update endpoint), a **DeviceStatusChangedEvent** is published to the **Notification Service**, triggering notifications to all users associated with that device.
+
+To verify event processing, you can check the logs of each service container using `docker logs <container_id>`. The logs will show event handling details, including when the notification emails are triggered and when devices are disassociated.
+
+### Handling Race Conditions and Concurrency
+
+In developing this system, special attention was given to potential race conditions and concurrent event processing. When processing the **UserDeletedEvent**, steps were taken to ensure that the email addresses for notifications are fetched before the user and their associations are deleted from the database. Additionally, checks are in place to verify if users were deleted concurrently before emails are sent. Similarly, during the processing of the **DeviceStatusChangedEvent**, it is ensured that the device hasn’t been deleted before sending notifications. User associations with the device are fetched just before sending emails to account for any changes in user-device associations that may have occurred in the meantime. In both cases, logs are generated to track event processing, and checks ensure the system handles concurrent deletions and status changes gracefully.
+
+## Custom Metric: Active Devices Gauge
+
+I implemented a custom **active_devices** gauge metric that tracks the number of active devices in the system. You can visualize this metric using Prometheus and Grafana. To see this metric, navigate to the Prometheus UI at http://localhost:9090 and search for `active_devices`. The metric is also available for visualization on Grafana, where it’s displayed on the dashboard.
 
 ## Example HTTP Requests
 
